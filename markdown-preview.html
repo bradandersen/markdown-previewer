@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Live Preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .help-icon:hover {
+            background: #2980b9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.reset {
+            background: #e74c3c;
+        }
+
+        button.reset:hover {
+            background: #c0392b;
+        }
+
+        .sync-scroll-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sync-scroll-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .sync-scroll-container label {
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-pane, .preview-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            background: #34495e;
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        textarea {
+            flex: 1;
+            border: none;
+            padding: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            overflow-y: auto;
+        }
+
+        .preview {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+            border-left: 1px solid #ddd;
+        }
+
+        .preview h1, .preview h2, .preview h3, .preview h4, .preview h5, .preview h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .preview h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        .preview h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        .preview h3 { font-size: 1.25em; }
+        .preview h4 { font-size: 1em; }
+        .preview h5 { font-size: 0.875em; }
+        .preview h6 { font-size: 0.85em; color: #6a737d; }
+
+        .preview p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .preview code {
+            background: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 85%;
+        }
+
+        .preview pre {
+            background: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .preview pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .preview blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+            margin-bottom: 16px;
+        }
+
+        .preview ul, .preview ol {
+            padding-left: 2em;
+            margin-bottom: 16px;
+        }
+
+        .preview li {
+            margin-bottom: 0.25em;
+        }
+
+        .preview table {
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .preview table th, .preview table td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+
+        .preview table th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+
+        .preview table tr:nth-child(2n) {
+            background: #f6f8fa;
+        }
+
+        .preview a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        .preview a:hover {
+            text-decoration: underline;
+        }
+
+        .preview img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .preview hr {
+            height: 0.25em;
+            padding: 0;
+            margin: 24px 0;
+            background-color: #e1e4e8;
+            border: 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            Markdown Live Preview
+            <a href="https://www.markdownguide.org/basic-syntax/" target="_blank" class="help-icon" title="Markdown Syntax Guide">?</a>
+        </h1>
+        <div class="controls">
+            <div class="sync-scroll-container">
+                <input type="checkbox" id="syncScroll" checked>
+                <label for="syncScroll">Sync scroll</label>
+            </div>
+            <button onclick="openFile()">Open File</button>
+            <button onclick="saveFile()">Save File</button>
+            <button onclick="copyMarkdown()">Copy HTML</button>
+            <button class="reset" onclick="resetEditor()">Reset</button>
+        </div>
+    </header>
+
+    <input type="file" id="fileInput" accept=".md,.markdown,.txt">
+
+    <div class="container">
+        <div class="editor-pane">
+            <div class="pane-header">Markdown</div>
+            <textarea id="markdown-input" placeholder="Enter your markdown here..."># Welcome to Markdown Live Preview
+
+This is a **live markdown editor** that updates in real-time as you type.
+
+## Features
+
+- ✨ **Live Preview**: See your markdown rendered instantly
+- 🔄 **Sync Scroll**: Synchronized scrolling between editor and preview
+- 📋 **Copy HTML**: Copy the rendered HTML to clipboard
+- 🔄 **Reset**: Clear the editor and start fresh
+
+## Markdown Examples
+
+### Text Formatting
+
+You can make text **bold**, *italic*, or ***bold and italic***.
+
+You can also use ~~strikethrough~~ text.
+
+### Lists
+
+#### Unordered List
+- Item 1
+- Item 2
+  - Nested item 2.1
+  - Nested item 2.2
+- Item 3
+
+#### Ordered List
+1. First item
+2. Second item
+3. Third item
+
+### Code
+
+Inline code: `const x = 10;`
+
+Code block:
+```javascript
+function greet(name) {
+    console.log(`Hello, ${name}!`);
+}
+
+greet('World');
+```
+
+### Blockquotes
+
+> This is a blockquote.
+> It can span multiple lines.
+
+### Links and Images
+
+[Visit OpenAI](https://www.openai.com)
+
+### Tables
+
+| Feature | Supported |
+|---------|-----------|
+| Headers | ✓ |
+| Lists | ✓ |
+| Code | ✓ |
+| Tables | ✓ |
+
+### Horizontal Rule
+
+---
+
+### Task Lists
+
+- [x] Completed task
+- [ ] Incomplete task
+- [ ] Another task
+
+---
+
+**Start editing** this text or clear it using the Reset button!</textarea>
+        </div>
+
+        <div class="preview-pane">
+            <div class="pane-header">Preview</div>
+            <div id="preview" class="preview"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">Copied to clipboard!</div>
+
+    <script>
+        const markdownInput = document.getElementById('markdown-input');
+        const preview = document.getElementById('preview');
+        const syncScrollCheckbox = document.getElementById('syncScroll');
+        const notification = document.getElementById('notification');
+
+        // Configure marked options
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        // Update preview
+        function updatePreview() {
+            const markdown = markdownInput.value;
+            preview.innerHTML = marked.parse(markdown);
+        }
+
+        // Handle synchronized scrolling
+        let isScrolling = false;
+
+        markdownInput.addEventListener('scroll', () => {
+            if (!syncScrollCheckbox.checked || isScrolling) return;
+
+            isScrolling = true;
+            const scrollPercentage = markdownInput.scrollTop / (markdownInput.scrollHeight - markdownInput.clientHeight);
+            preview.scrollTop = scrollPercentage * (preview.scrollHeight - preview.clientHeight);
+
+            setTimeout(() => {
+                isScrolling = false;
+            }, 50);
+        });
+
+        preview.addEventListener('scroll', () => {
+            if (!syncScrollCheckbox.checked || isScrolling) return;
+
+            isScrolling = true;
+            const scrollPercentage = preview.scrollTop / (preview.scrollHeight - preview.clientHeight);
+            markdownInput.scrollTop = scrollPercentage * (markdownInput.scrollHeight - markdownInput.clientHeight);
+
+            setTimeout(() => {
+                isScrolling = false;
+            }, 50);
+        });
+
+        // Copy HTML to clipboard
+        function copyMarkdown() {
+            const html = preview.innerHTML;
+            navigator.clipboard.writeText(html).then(() => {
+                showNotification();
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Reset editor
+        function resetEditor() {
+            if (confirm('Are you sure you want to clear the editor?')) {
+                markdownInput.value = '';
+                updatePreview();
+            }
+        }
+
+        // Open file with native file picker (if supported)
+        async function openFile() {
+            // Try using the File System Access API (Chrome, Edge, Opera)
+            if ('showOpenFilePicker' in window) {
+                try {
+                    const options = {
+                        types: [
+                            {
+                                description: 'Markdown Files',
+                                accept: {
+                                    'text/markdown': ['.md', '.markdown'],
+                                    'text/plain': ['.txt']
+                                }
+                            }
+                        ],
+                        multiple: false
+                    };
+
+                    const [fileHandle] = await window.showOpenFilePicker(options);
+                    const file = await fileHandle.getFile();
+                    const content = await file.text();
+                    markdownInput.value = content;
+                    updatePreview();
+                    saveContent();
+                    return;
+                } catch (err) {
+                    // User cancelled or error occurred
+                    if (err.name !== 'AbortError') {
+                        console.error('Error opening file:', err);
+                    }
+                    return;
+                }
+            }
+
+            // Fallback for browsers that don't support File System Access API
+            const fileInput = document.getElementById('fileInput');
+            fileInput.click();
+        }
+
+        // Handle file selection (fallback for older browsers)
+        document.getElementById('fileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    markdownInput.value = e.target.result;
+                    updatePreview();
+                    saveContent();
+                };
+                reader.readAsText(file);
+            }
+            // Reset file input so the same file can be opened again
+            event.target.value = '';
+        });
+
+        // Save file with native file picker (if supported)
+        async function saveFile() {
+            const content = markdownInput.value;
+
+            // Try using the File System Access API (Chrome, Edge, Opera)
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const options = {
+                        types: [
+                            {
+                                description: 'Markdown Files',
+                                accept: {
+                                    'text/markdown': ['.md', '.markdown']
+                                }
+                            }
+                        ],
+                        suggestedName: 'document.md'
+                    };
+
+                    const fileHandle = await window.showSaveFilePicker(options);
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    return;
+                } catch (err) {
+                    // User cancelled or error occurred
+                    if (err.name !== 'AbortError') {
+                        console.error('Error saving file:', err);
+                    }
+                    return;
+                }
+            }
+
+            // Fallback for browsers that don't support File System Access API
+            let filename = prompt('Enter filename:', 'document.md');
+
+            // If user cancels or enters empty string, don't save
+            if (!filename) return;
+
+            // Ensure the filename ends with .md
+            if (!filename.endsWith('.md')) {
+                filename += '.md';
+            }
+
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Show notification
+        function showNotification() {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        // Save content to localStorage
+        function saveContent() {
+            localStorage.setItem('markdownContent', markdownInput.value);
+        }
+
+        // Load content from localStorage
+        function loadContent() {
+            const savedContent = localStorage.getItem('markdownContent');
+            if (savedContent !== null) {
+                markdownInput.value = savedContent;
+            }
+        }
+
+        // Initialize
+        markdownInput.addEventListener('input', () => {
+            updatePreview();
+            saveContent();
+        });
+
+        // Load saved content on page load
+        loadContent();
+        updatePreview();
+    </script>
+</body>
+</html>
